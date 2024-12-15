@@ -3,7 +3,6 @@ namespace Domain;
 public class Permission
 {
     public Guid Id { get; set; }
-    public Guid MemberId { get; set; }
     
     public bool CanWriteMessage { get; set; }
     public bool CanInviteNewMembers { get; set; }
