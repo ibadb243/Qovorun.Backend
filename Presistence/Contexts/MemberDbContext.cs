@@ -1,5 +1,6 @@
 using Application.Interfaces;
 using Domain;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Presistence.Contexts;
@@ -7,4 +8,7 @@ namespace Presistence.Contexts;
 public class MemberDbContext : DbContext, IMemberDbContext
 {
     public DbSet<Member> Members { get; set; }
+
+    public MemberDbContext(DbContextOptions<MemberDbContext> options)
+        : base(options) { }
 }

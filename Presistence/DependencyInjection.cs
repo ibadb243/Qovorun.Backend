@@ -8,6 +8,7 @@ namespace Presistence;
 
 public static class DependencyInjection
 {
+    /* TODO: implement contexts interfaces */
     public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration["DefaultConnection"];

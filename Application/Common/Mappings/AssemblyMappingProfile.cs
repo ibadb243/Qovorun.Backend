@@ -1,9 +1,10 @@
 using System.Reflection;
 using Application.Common.Mapping;
+using AutoMapper;
 
 namespace Application.Common.Mappings;
         
-public class AssemblyMappingProfile
+public class AssemblyMappingProfile : Profile
 {
     public AssemblyMappingProfile(Assembly assembly) => ApplyMappingsFromAssebly(assembly);
 
@@ -18,7 +19,7 @@ public class AssemblyMappingProfile
         {
             var instance = Activator.CreateInstance(type);
             var methodInfo = type.GetMethod("Mapping");
-            methodInfo?.Invoke(instance, [this]);
+            methodInfo?.Invoke(instance, new object[] { this });
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace Domain;
+namespace Domain.Entities;
 
 public class Permission
 {
@@ -10,4 +10,6 @@ public class Permission
     public bool CanExcludeMember { get; set; }
     public bool CanGivePermissions { get; set; }
     public bool CanDeleteGroup { get; set; }
+    
+    public DateTimeOffset? UpdatedAt { get; set; }
 }

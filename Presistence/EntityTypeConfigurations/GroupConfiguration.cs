@@ -1,4 +1,5 @@
 using Domain;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,9 +13,6 @@ public class GroupConfiguration : IEntityTypeConfiguration<Group>
         builder.HasIndex(_ => _.Id).IsUnique();
         
         builder.Property(_ => _.Name).HasMaxLength(128).IsRequired();
-        
-        builder.HasIndex(_ => _.ShortName).IsUnique();
-        builder.Property(_ => _.ShortName).IsRequired().HasMaxLength(64);
         
         builder.Property(_ => _.Description).HasMaxLength(4024);
     }
