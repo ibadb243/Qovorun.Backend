@@ -1,10 +1,10 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Application.Interfaces;
+namespace Application.Interfaces.Contexts;
 
-public interface IMemberDbContext
+public interface IChannelDbContext
 {
-    public DbSet<Member> Members { get; set; }
+    public DbSet<Channel> Channels { get; set; }
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

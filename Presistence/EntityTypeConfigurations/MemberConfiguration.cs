@@ -15,8 +15,6 @@ public class MemberConfiguration : IEntityTypeConfiguration<Member>
         builder.HasIndex(_ => _.UserId);
         
         builder.HasIndex(_ => _.GroupId);
-
-        builder.HasIndex(_ => _.PermissionId).IsUnique();
         
         builder.Property(_ => _.Nickname).HasMaxLength(32);
     }

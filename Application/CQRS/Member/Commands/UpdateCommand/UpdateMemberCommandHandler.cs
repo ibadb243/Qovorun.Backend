@@ -1,4 +1,7 @@
 using Application.Interfaces;
+using Application.Interfaces.Contexts;
+using Application.Interfaces.Services;
+using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,33 +9,33 @@ namespace Application.CQRS.Member.Commands.UpdateCommand;
 
 public class UpdateMemberCommandHandler : IRequestHandler<UpdateMemberCommand>
 {
-    private readonly IUserDbContext _userDbContext;
-    private readonly IMemberDbContext _memberDbContext;
-    private readonly IPermissionDbContext _permissionDbContext;
-
-    public UpdateMemberCommandHandler(IUserDbContext userDbContext, IMemberDbContext memberDbContext, IPermissionDbContext permissionDbContext)
+    private readonly IUserService _userService;
+    private readonly IGroupService _groupService;
+    private readonly IMembersService _memberService;
+    
+    public UpdateMemberCommandHandler(
+        IUserService userService,
+        IGroupService groupService,
+        IMembersService memberService)
     {
-        _userDbContext = userDbContext;
-        _memberDbContext = memberDbContext;
-        _permissionDbContext = permissionDbContext;
+        _userService = userService;
+        _groupService = groupService;
+        _memberService = memberService;
     }
     
     public async Task Handle(UpdateMemberCommand request, CancellationToken cancellationToken)
     {
-        var requester = await _userDbContext.Users.FirstOrDefaultAsync(u => u.Id == request.RequesterId, cancellationToken);
-        if (requester == null || requester.DeletedAt != null) throw new Exception("User not found");
+        var requester = await _userService.GetUserAsync(request.RequesterId, cancellationToken);
+        if (requester == null) throw new Exception("User not found");
         
-        var member = await _memberDbContext.Members.FirstOrDefaultAsync(m => m.Id == request.MemberId, cancellationToken);
-        if (member == null || member.BannedAt != null) throw new Exception("Member not found");
+        var member = await _memberService.GetMemberAsync(request.MemberId, cancellationToken);
+        if (member == null) throw new Exception("Member not found");
 
-        if (requester.Id == member.UserId) return;
+        var requesterMember = await _memberService.GetMemberAsync(requester.Id, member.GroupId, cancellationToken);
+        if (requesterMember == null) throw new Exception("Member not found");
+
+        if (!requesterMember.Permissions.HasFlag(GroupMemberPermission.CanManageRoles)) throw new Exception("Can't manage roles");
         
-        var requester_member = await _memberDbContext.Members.FirstOrDefaultAsync(m => m.UserId == requester.Id && m.GroupId == member.GroupId, cancellationToken);
-        if (requester_member == null || requester_member.BannedAt != null) throw new Exception("You are not mates");
-        
-        member.Nickname = request.Nickname;
-        member.UpdatedAt = DateTimeOffset.UtcNow;
-        
-        await _memberDbContext.SaveChangesAsync(cancellationToken);
+        await _memberService.UpdateMemberAsync(member.Id, member.Role, member.Permissions, request.Nickname, cancellationToken);
     }
 }

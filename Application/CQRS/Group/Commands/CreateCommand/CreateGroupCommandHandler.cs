@@ -1,4 +1,6 @@
 using Application.Interfaces;
+using Application.Interfaces.Contexts;
+using Application.Interfaces.Services;
 using Domain;
 using Domain.Entities;
 using Domain.Enums;
@@ -9,93 +11,40 @@ namespace Application.CQRS.User.Commands.CreateCommand;
 
 public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Guid>
 {
-    private readonly IUserDbContext _userDbContext;
-    private readonly IGroupDbContext _groupDbContext;
-    private readonly IMemberDbContext _memberDbContext;
-    private readonly IShortnameDbContext _shortnameDbContext;
-    private readonly IPermissionDbContext _permissionDbContext;
+    private readonly IUserService _userService;
+    private readonly IGroupService _groupService;
+    private readonly IMembersService _membersService;
+    private readonly IShortnameService _shortnameService;
     
     public CreateGroupCommandHandler(
-        IUserDbContext userDbContext, 
-        IGroupDbContext groupDbContext, 
-        IMemberDbContext memberDbContext, 
-        IShortnameDbContext shortnameDbContext,
-        IPermissionDbContext permissionDbContext)
+        IUserService userService,
+        IGroupService groupService,
+        IMembersService membersService,
+        IShortnameService shortnameService)
     {
-        _userDbContext = userDbContext;
-        _groupDbContext = groupDbContext;
-        _memberDbContext = memberDbContext;
-        _shortnameDbContext = shortnameDbContext;
-        _permissionDbContext = permissionDbContext;
+        _userService = userService;
+        _groupService = groupService;
+        _membersService = membersService;
+        _shortnameService = shortnameService;
     }
 
     public async Task<Guid> Handle(CreateGroupCommand request, CancellationToken cancellationToken)
     {
-        var requester = await _userDbContext.Users.FirstOrDefaultAsync(u => u.Id == request.RequesterId, cancellationToken);
-        if (requester == null || requester.DeletedAt != null) throw new Exception("User not found");
+        var requester = await _userService.GetUserAsync(request.RequesterId, cancellationToken);
+        if (requester == null) throw new Exception("User not found");
 
-        var shortname = await _shortnameDbContext.Shortnames.FirstOrDefaultAsync(s => s.Shortname == request.Shortname, cancellationToken);
-        if (shortname != null && shortname.Owner != ShortnameOwner.None) throw new Exception("the short name is already taken");
+        if (!await _shortnameService.IsShortnameFreeAsync(request.Shortname, cancellationToken)) throw new Exception("the shortname is already taken");
         
-        var group = new Domain.Entities.Group()
-        {
-            Id = Guid.NewGuid(),
-            Name = request.Name,
-            Description = request.Description,
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
+        var group = await _groupService.CreateGroupAsync(request.Name, request.Description, cancellationToken);
         
-        if (shortname == null)
-        {
-            shortname = new ShortnameField
-            {
-                Id = Guid.NewGuid(),
-                Owner = ShortnameOwner.Group,
-                OwnerId = group.Id,
-                Shortname = request.Shortname,
-                CreatedAt = DateTimeOffset.UtcNow,
-            };
-            
-            await _shortnameDbContext.Shortnames.AddAsync(shortname, cancellationToken);
-        }
+        var shortnameF = await _shortnameService.GetShortnameAsync(request.Shortname, cancellationToken);
+        
+        if (shortnameF == null)
+            await _shortnameService.CreateShortnameAsync(request.Shortname, ShortnameOwner.Group, group.Id, cancellationToken);
         else
-        {
-            shortname.Owner = ShortnameOwner.Group;
-            shortname.OwnerId = group.Id;
-            shortname.ChangedOwnerAt = requester.CreatedAt;
-        }
+            await _shortnameService.UpdateShortnameAsync(request.Shortname, ShortnameOwner.Group, shortnameF.Id, cancellationToken);
 
-        var permission = new Permission
-        {
-            Id = Guid.NewGuid(),
-            CanDeleteGroup = true,
-            CanEditGroupInformation = true,
-            CanExcludeMember = true,
-            CanGivePermissions = true,
-            CanInviteNewMembers = true,
-            CanWriteMessage = true,
-        };
-
-        var member = new Domain.Entities.Member
-        {
-            Id = Guid.NewGuid(),
-            UserId = requester.Id,
-            GroupId = group.Id,
-            PermissionId = permission.Id,
-            Nickname = "Owner",
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
-        
-        await _groupDbContext.Groups.AddAsync(group, cancellationToken);
-        await _groupDbContext.SaveChangesAsync(cancellationToken);
-
-        await _shortnameDbContext.SaveChangesAsync(cancellationToken);
-        
-        await _permissionDbContext.Permissions.AddAsync(permission, cancellationToken);
-        await _permissionDbContext.SaveChangesAsync(cancellationToken);
-        
-        await _memberDbContext.Members.AddAsync(member, cancellationToken);
-        await _memberDbContext.SaveChangesAsync(cancellationToken);
+        await _membersService.CreateOwnerAsync(requester.Id, group.Id, cancellationToken);
         
         return group.Id;
     }

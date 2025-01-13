@@ -1,7 +1,7 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Application.Interfaces;
+namespace Application.Interfaces.Contexts;
 
 public interface IGroupDbContext
 {

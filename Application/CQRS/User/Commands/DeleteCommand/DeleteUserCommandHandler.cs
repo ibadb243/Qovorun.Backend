@@ -1,4 +1,6 @@
 using Application.Interfaces;
+using Application.Interfaces.Contexts;
+using Application.Interfaces.Services;
 using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -7,26 +9,21 @@ namespace Application.CQRS.User.Commands.DeleteCommand;
 
 public class DeleteUserCommandHandler : IRequestHandler<DeleteUserCommand>
 {
-    private readonly IUserDbContext _userDbContext;
-    private readonly IShortnameDbContext _shortnameDbContext;
+    private readonly IUserService _userService;
+    private readonly IShortnameService _shortnameService;
 
-    public DeleteUserCommandHandler(IUserDbContext userDbContext, IShortnameDbContext shortnameDbContext)
+    public DeleteUserCommandHandler(IUserService userService, IShortnameService shortnameService)
     {
-        _userDbContext = userDbContext;
-        _shortnameDbContext = shortnameDbContext;
+        _userService = userService;
+        _shortnameService = shortnameService;
     }
     
     public async Task Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {
-        var requester = await _userDbContext.Users.FirstOrDefaultAsync(u => u.Id == request.RequesterId, cancellationToken);
-        if (requester == null || requester.DeletedAt != null) throw new Exception("User not found");
-
-        var shortname = await _shortnameDbContext.Shortnames.FirstAsync(s => s.Owner == ShortnameOwner.User && s.OwnerId == requester.Id, cancellationToken)!;
-
-        shortname.Owner = ShortnameOwner.None;
-        requester.DeletedAt = DateTimeOffset.UtcNow;
+        var user = await _userService.GetUserAsync(request.RequesterId, cancellationToken);
+        if (user == null) throw new Exception("User not found");
         
-        await _userDbContext.SaveChangesAsync(cancellationToken);
-        await _shortnameDbContext.SaveChangesAsync(cancellationToken);
+        await _userService.DeleteUserAsync(user.Id, cancellationToken);
+        await _shortnameService.ClearShortnameAsync(ShortnameOwner.User, user.Id, cancellationToken);
     }
 }

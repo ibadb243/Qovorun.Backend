@@ -1,15 +1,14 @@
 using Application.Interfaces;
 using Application.Interfaces.Contexts;
-using Domain;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Presistence.Contexts;
 
-public class GroupDbContext : DbContext, IGroupDbContext
+public class ChannelDbContext : DbContext, IChannelDbContext
 {
-    public DbSet<Group> Groups { get; set; }
+    public DbSet<Channel> Channels { get; set; }
 
-    public GroupDbContext(DbContextOptions<GroupDbContext> options)
+    public ChannelDbContext(DbContextOptions<ChannelDbContext> options)
         : base(options) { }
 }

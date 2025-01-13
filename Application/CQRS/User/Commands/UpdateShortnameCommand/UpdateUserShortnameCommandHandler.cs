@@ -1,4 +1,6 @@
 using Application.Interfaces;
+using Application.Interfaces.Contexts;
+using Application.Interfaces.Services;
 using Domain.Entities;
 using Domain.Enums;
 using MediatR;
@@ -8,49 +10,28 @@ namespace Application.CQRS.User.Commands.UpdateShortnameCommand;
 
 public class UpdateUserShortnameCommandHandler : IRequestHandler<UpdateUserShortnameCommand>
 {
-    private readonly IUserDbContext _userDbContext;
-    private readonly IShortnameDbContext _shortnameDbContext;
+    private readonly IUserService _userService;
+    private readonly IShortnameService _shortnameService;
 
-    public UpdateUserShortnameCommandHandler(IUserDbContext userDbContext, IShortnameDbContext shortnameDbContext)
+    public UpdateUserShortnameCommandHandler(IUserService userService, IShortnameService shortnameService)
     {
-        _userDbContext = userDbContext;
-        _shortnameDbContext = shortnameDbContext;
+        _userService = userService;
+        _shortnameService = shortnameService;
     }
     
     public async Task Handle(UpdateUserShortnameCommand request, CancellationToken cancellationToken)
     {
-        var requester = await _userDbContext.Users.FirstOrDefaultAsync(u => u.Id == request.RequesterId, cancellationToken);
-        if (requester == null || requester.DeletedAt != null) throw new Exception("User not found");
-
-        var shortname = await _shortnameDbContext.Shortnames.FirstAsync(s => s.Owner == ShortnameOwner.User && s.OwnerId == requester.Id, cancellationToken)!;
-        if (shortname.Shortname == request.Shortname) return;
+        var user = await _userService.GetUserAsync(request.RequesterId, cancellationToken);
+        if (user == null) throw new Exception("User not found");
         
-        var new_shortname = await _shortnameDbContext.Shortnames.FirstOrDefaultAsync(s => s.Shortname == request.Shortname, cancellationToken);
-        if (new_shortname != null && new_shortname.Owner != ShortnameOwner.None) throw new Exception("The short name is already taken");
+        var isFree = await _shortnameService.IsShortnameFreeAsync(request.Shortname, cancellationToken);
+        if (!isFree) throw new Exception("Shortname is used");
         
-        if (new_shortname == null)
-        {
-            new_shortname = new ShortnameField
-            {
-                Id = Guid.NewGuid(),
-                Owner = ShortnameOwner.User,
-                OwnerId = requester.Id,
-                Shortname = request.Shortname,
-                CreatedAt = DateTimeOffset.UtcNow,
-            };
-            
-            await _shortnameDbContext.Shortnames.AddAsync(new_shortname, cancellationToken);
-        }
-        else
-        {
-            new_shortname.Owner = ShortnameOwner.User;
-            new_shortname.OwnerId = requester.Id;
-            new_shortname.ChangedOwnerAt = DateTimeOffset.UtcNow;
-        }
-
-        shortname.Owner = ShortnameOwner.None;
-        shortname.ChangedOwnerAt = DateTimeOffset.UtcNow;
-
-        await _shortnameDbContext.SaveChangesAsync(cancellationToken);
+        var shortname = await _shortnameService.GetShortnameAsync(request.Shortname, cancellationToken);
+        
+        if (shortname == null) 
+            await _shortnameService.CreateShortnameAsync(request.Shortname, ShortnameOwner.User, user.Id, cancellationToken);
+        else 
+            await _shortnameService.UpdateShortnameAsync(request.Shortname, ShortnameOwner.User, user.Id, cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
 using Application.Interfaces;
+using Application.Interfaces.Contexts;
 using AutoMapper;
 using Domain.Enums;
 using MediatR;

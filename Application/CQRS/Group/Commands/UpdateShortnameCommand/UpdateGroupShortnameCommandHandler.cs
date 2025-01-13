@@ -1,4 +1,6 @@
 using Application.Interfaces;
+using Application.Interfaces.Contexts;
+using Application.Interfaces.Services;
 using Domain.Entities;
 using Domain.Enums;
 using MediatR;
@@ -8,69 +10,45 @@ namespace Application.CQRS.Group.Commands.UpdateShortnameCommand;
 
 public class UpdateGroupShortnameCommandHandler : IRequestHandler<UpdateGroupShortnameCommand>
 {
-    private readonly IUserDbContext _userDbContext;
-    private readonly IGroupDbContext _groupDbContext;
-    private readonly IMemberDbContext _memberDbContext;
-    private readonly IShortnameDbContext _shortnameDbContext;
-    private readonly IPermissionDbContext _permissionDbContext;
-
+    private readonly IUserService _userService;
+    private readonly IGroupService _groupService;
+    private readonly IMembersService _memberService;
+    private readonly IShortnameService _shortnameService;
+    
     public UpdateGroupShortnameCommandHandler(
-        IUserDbContext userDbContext,
-        IGroupDbContext groupDbContext,
-        IMemberDbContext memberDbContext,
-        IShortnameDbContext shortnameDbContext,
-        IPermissionDbContext permissionDbContext)
+        IUserService userService,
+        IGroupService groupService,
+        IMembersService memberService,
+        IShortnameService shortnameService)
     {
-        _userDbContext = userDbContext;
-        _groupDbContext = groupDbContext;
-        _memberDbContext = memberDbContext;
-        _shortnameDbContext = shortnameDbContext;
-        _permissionDbContext = permissionDbContext;
+        _userService = userService;
+        _groupService = groupService;
+        _memberService = memberService;
+        _shortnameService = shortnameService;
     }
     
     public async Task Handle(UpdateGroupShortnameCommand request, CancellationToken cancellationToken)
     {
-        var requester = await _userDbContext.Users.FirstOrDefaultAsync(u => u.Id == request.RequesterId, cancellationToken);
-        if (requester == null || requester.DeletedAt != null) throw new Exception("User not found");
+        var requester = await _userService.GetUserAsync(request.RequesterId, cancellationToken);
+        if (requester == null) throw new Exception("User not found");
         
-        var group = await _groupDbContext.Groups.FirstOrDefaultAsync(g => g.Id == request.GroupId, cancellationToken);
-        if (group == null  || group.DeletedAt != null) throw new Exception("Group not found");
+        var group = await _groupService.GetGroupAsync(request.GroupId, cancellationToken);
+        if (group == null) throw new Exception("Group not found");
         
-        var member = await _memberDbContext.Members.FirstOrDefaultAsync(m => m.UserId == requester.Id && m.GroupId == group.Id, cancellationToken);
-        if (member == null || member.BannedAt != null) throw new Exception("You are not a member of this group");
+        var member = await _memberService.GetMemberAsync(requester.Id, group.Id, cancellationToken);
+        if (member == null) throw new Exception("You are not a member of this group");
 
-        var permission = await _permissionDbContext.Permissions.FirstAsync(p => p.Id == member.PermissionId, cancellationToken)!;
-        if (permission.CanEditGroupInformation is false) throw new Exception("You do not have permission to edit this group");
+        if (!await _shortnameService.IsShortnameFreeAsync(request.Shortname, cancellationToken))
+            throw new Exception("Shortname is not free");
         
-        var shortname = await _shortnameDbContext.Shortnames.FirstAsync(s => s.Owner == ShortnameOwner.Group && s.OwnerId == group.Id, cancellationToken)!;
-        if (shortname.Shortname == request.Shortname) return;
-        
-        var new_shortname = await _shortnameDbContext.Shortnames.FirstOrDefaultAsync(s => s.Shortname == request.Shortname, cancellationToken);
-        if (new_shortname != null && new_shortname.Owner != ShortnameOwner.None) throw new Exception("The short name is already taken");
-        
-        if (new_shortname == null)
-        {
-            new_shortname = new ShortnameField
-            {
-                Id = Guid.NewGuid(),
-                Owner = ShortnameOwner.Group,
-                OwnerId = requester.Id,
-                Shortname = request.Shortname,
-                CreatedAt = DateTimeOffset.UtcNow,
-            };
-            
-            await _shortnameDbContext.Shortnames.AddAsync(new_shortname, cancellationToken);
-        }
+        var shortnameF = await _shortnameService.GetShortnameAsync(request.Shortname, cancellationToken);
+
+        if (shortnameF == null)
+            await _shortnameService.CreateShortnameAsync(request.Shortname, ShortnameOwner.Group, group.Id, cancellationToken);
         else
         {
-            new_shortname.Owner = ShortnameOwner.Group;
-            new_shortname.OwnerId = requester.Id;
-            new_shortname.ChangedOwnerAt = DateTimeOffset.UtcNow;
+            await _shortnameService.ClearShortnameAsync(request.Shortname, cancellationToken);
+            await _shortnameService.UpdateShortnameAsync(request.Shortname, ShortnameOwner.Group, group.Id, cancellationToken);
         }
-
-        shortname.Owner = ShortnameOwner.None;
-        shortname.ChangedOwnerAt = DateTimeOffset.UtcNow;
-
-        await _shortnameDbContext.SaveChangesAsync(cancellationToken);
     }
 }

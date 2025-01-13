@@ -1,10 +1,10 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Application.Interfaces;
+namespace Application.Interfaces.Contexts;
 
-public interface IPermissionDbContext
+public interface IMemberDbContext
 {
-    public DbSet<Permission> Permissions { get; set; }
+    public DbSet<Member> Members { get; set; }
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
