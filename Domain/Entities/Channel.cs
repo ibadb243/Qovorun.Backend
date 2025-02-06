@@ -8,4 +8,15 @@ public class Channel : Conference
     public string Description { get; set; }
     public Guid? LinkedGroupId { get; set; } 
     public DateTimeOffset? UpdatedAt { get; set; }
+
+    public Channel(string name, string description)
+    {
+        Id = Guid.NewGuid();
+        Name = name;
+        Description = description;
+        LinkedGroupId = null;
+        CreatedAt = DateTimeOffset.Now;
+        UpdatedAt = null;
+        DeletedAt = null;
+    }
 }

@@ -9,5 +9,17 @@ public class ShortnameField
     public Guid? OwnerId { get; set; }
     public string Shortname { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset ChangedOwnerAt { get; set; }
+    public DateTimeOffset? ChangedOwnerAt { get; set; }
+
+    public ShortnameField() { }
+
+    public ShortnameField(ShortnameOwner owner, Guid? ownerId, string shortname)
+    {
+        Id = Guid.NewGuid();
+        Owner = owner;
+        OwnerId = ownerId;
+        Shortname = shortname;
+        CreatedAt = DateTimeOffset.Now;
+        ChangedOwnerAt = null;
+    }
 }

@@ -13,4 +13,19 @@ public class Member
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
     public DateTimeOffset? BannedAt { get; set; }
+
+    public Member() { }
+
+    public Member(Guid userId, Guid groupId, GroupRole role, GroupMemberPermission permissions, string nickname)
+    {
+        Id = Guid.NewGuid();
+        UserId = userId;
+        GroupId = groupId;
+        Role = role;
+        Permissions = permissions;
+        Nickname = nickname;
+        CreatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = null;
+        BannedAt = null;
+    }
 }
