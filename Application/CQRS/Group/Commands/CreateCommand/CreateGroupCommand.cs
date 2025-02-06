@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace Application.CQRS.User.Commands.CreateCommand;
+namespace Application.CQRS.Group.Commands.CreateCommand;
 
 public class CreateGroupCommand : IRequest<Guid>
 {

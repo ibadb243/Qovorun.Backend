@@ -12,5 +12,6 @@ public class ShortnameConfiguration : IEntityTypeConfiguration<ShortnameField>
         builder.HasIndex(_ => _.Id).IsUnique();
         
         builder.HasIndex(_ => _.Shortname).IsUnique();
+        builder.Property(_ => _.Shortname).HasMaxLength(128).IsRequired();
     }
 }

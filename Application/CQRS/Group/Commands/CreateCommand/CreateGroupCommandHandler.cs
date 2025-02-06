@@ -1,13 +1,8 @@
-using Application.Interfaces;
-using Application.Interfaces.Contexts;
 using Application.Interfaces.Services;
-using Domain;
-using Domain.Entities;
 using Domain.Enums;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
-namespace Application.CQRS.User.Commands.CreateCommand;
+namespace Application.CQRS.Group.Commands.CreateCommand;
 
 public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Guid>
 {
