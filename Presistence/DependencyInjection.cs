@@ -15,18 +15,16 @@ public static class DependencyInjection
         var connectionString = configuration["DefaultConnection"];
         
         services.AddDbContext<UserDbContext>(options => options.UseSqlite(connectionString));
-        services.AddDbContext<GroupDbContext>(options => options.UseSqlite(connectionString));
         services.AddDbContext<MemberDbContext>(options => options.UseSqlite(connectionString));
         services.AddDbContext<MessageDbContext>(options => options.UseSqlite(connectionString));
-        services.AddDbContext<ChannelDbContext>(options => options.UseSqlite(connectionString));
         services.AddDbContext<ShortnameDbContext>(options => options.UseSqlite(connectionString));
+        services.AddDbContext<ConferenceDbContext>(options => options.UseSqlite(connectionString));
         
         services.AddScoped<IUserDbContext>(provider => provider.GetService<UserDbContext>()!);
-        services.AddScoped<IGroupDbContext>(provider => provider.GetService<GroupDbContext>()!);
         services.AddScoped<IMemberDbContext>(provider => provider.GetService<MemberDbContext>()!);
         services.AddScoped<IMessageDbContext>(provider => provider.GetService<MessageDbContext>()!);
-        services.AddScoped<IChannelDbContext>(provider => provider.GetService<ChannelDbContext>()!);
         services.AddScoped<IShortnameDbContext>(provider => provider.GetService<ShortnameDbContext>()!);
+        services.AddScoped<IConferenceDbContext>(provider => provider.GetService<ConferenceDbContext>()!);
         
         return services;
     }
